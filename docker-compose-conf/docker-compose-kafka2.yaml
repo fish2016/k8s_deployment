@@ -1,0 +1,47 @@
+version: '3.7'
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    volumes:
+       - /opt/zookeeper/data:/data
+    container_name: zookeeper
+    mem_limit: 1024M
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181 #原来端口号是2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 2181:2181
+    restart: always
+  kafka_node1:
+    image: wurstmeister/kafka
+    container_name: kafka_node1
+    mem_limit: 1024M
+    depends_on:
+      - zookeeper
+    ports: 
+      - 9092:9092
+    volumes:
+      - /opt/kafka/data:/kafka
+    environment:
+      KAFKA_CREATE_TOPICS: "test"
+      KAFKA_BROKER_NO: 0
+      KAFKA_LISTENERS: PLAINTEXT://kafka_node1:9092
+      #KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${kafka_service_public_ip}:${kafka_service_public_port}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://120.79.33.255:9092  ## 宿主机IP
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms16M"
+      kafka_service_public_ip: 120.79.33.255
+      kafka_service_public_port: 9092
+    restart: always
+  kafka_manager: 
+    image: hlebalbau/kafka-manager:stable
+    ports:
+      - 9000:9000
+    environment:
+      ZK_HOSTS: "zookeeper:2181"  
+    depends_on:
+      - zookeeper
+      - kafka_node1
+    restart: always #> /etc/kafka/kafka.yml
